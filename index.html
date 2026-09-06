@@ -14,7 +14,7 @@
   <script src="../PDF-Resizer/pdf-lib.min.js"></script>
   <script src="../PDF-Resizer/jszip.min.js"></script>
 
-  <!-- 2. High-Fidelity DOCX Renderer + Canvas Snapshot -->
+  <!-- 2. High-Fidelity DOCX & PPTX Renderers -->
   <script src="https://cdn.jsdelivr.net/npm/docx-preview@0.3.3/dist/docx-preview.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
@@ -86,7 +86,6 @@
       flex: 1;
     }
 
-    /* Top Navigation Banner */
     .app-nav {
       display: flex;
       justify-content: space-between;
@@ -157,7 +156,6 @@
       backdrop-filter: blur(10px);
     }
 
-    /* Formats Showcase */
     .formats-container { display: flex; flex-direction: column; gap: 0.8rem; }
     .format-group { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
     .format-category {
@@ -187,7 +185,6 @@
       transform: scale(1.05) rotate(-1deg);
     }
 
-    /* Kawaii Drop Zone */
     .dropzone {
       border: 3px dashed #ff9ebb;
       border-radius: var(--radius-lg);
@@ -255,9 +252,7 @@
       transform: translateY(-2.5px) scale(1.03);
       box-shadow: 0 7px 20px rgba(255, 71, 133, 0.45);
     }
-    button:active, .btn:active {
-      transform: translateY(1px) scale(0.98);
-    }
+    button:active, .btn:active { transform: translateY(1px) scale(0.98); }
 
     button.secondary {
       background: #ffffff;
@@ -290,7 +285,6 @@
     .action-btn-group { display: inline-flex; gap: 0.4rem; justify-content: flex-end; }
     .action-btn-group button { padding: 0.35rem 0.75rem; border-radius: 12px; font-size: 0.9rem; }
 
-    /* Engine Status */
     .engine-status {
       display: inline-flex;
       align-items: center;
@@ -306,7 +300,6 @@
     .status-ready { background: #d1fae5; color: #047857; border: 1.5px solid #a7f3d0; }
     .status-error { background: #ffe4e6; color: #e11d48; border: 1.5px solid #fecdd3; }
 
-    /* Progress & Batch Bar */
     .batch-bar {
       display: flex;
       justify-content: space-between;
@@ -339,7 +332,6 @@
       transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    /* Cute File Table */
     .file-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.9rem; }
     .file-table th {
       text-align: left;
@@ -393,7 +385,6 @@
 
     .truncate { max-width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; font-weight: 600; }
 
-    /* Kawaii Standout Pipeline Hub */
     .workflow-hub {
       display: none;
       position: relative;
@@ -515,7 +506,6 @@
       color: #fff;
     }
 
-    /* Kawaii Footer */
     footer.kawaii-footer {
       text-align: center;
       padding: 2.2rem 1rem 1rem;
@@ -559,7 +549,7 @@
 
   <header>
     <h1>Universal Virtual Print to PDF 🍓</h1>
-    <p class="subtitle">Convert any printable file - Word docs, storyboards, cute scans, Apple iWork, or code - into crisp vector PDFs! (ฅ^•ﻌ•^ฅ)</p>
+    <p class="subtitle">Convert any printable file - Word docs, PowerPoint decks, spreadsheets, cute scans, Apple iWork, or code - into crisp vector PDFs! (ฅ^•ﻌ•^ฅ)</p>
     <div id="engine-badge" class="engine-status status-loading">⏳ Checking virtual print engine...</div>
   </header>
 
@@ -570,8 +560,8 @@
         <span class="format-category">🌸 Office & Apple</span>
         <div class="format-pills">
           <span class="format-pill">DOCX (Rich Layout)</span>
-          <span class="format-pill">XLSX/XLS/ODS</span>
-          <span class="format-pill">PPTX</span>
+          <span class="format-pill">PPTX (Auto-Scale Slides)</span>
+          <span class="format-pill">XLSX/XLS/ODS (Fit Sheets)</span>
           <span class="format-pill">Apple .PAGES</span>
           <span class="format-pill">Apple .KEY</span>
           <span class="format-pill">Apple .NUMBERS</span>
@@ -997,12 +987,22 @@
       return await renderDocxWithLayout(await item.blob.arrayBuffer(), item.name);
     }
 
-    // 3. Video Storyboard Contact Sheet (MP4, WEBM, MOV)
+    // 3. PowerPoint Presentations (PPTX) - Auto-detect size, orientation & fit slide
+    if (ext === 'pptx' && window.JSZip && window.html2canvas) {
+      return await renderPptxToPdf(item.blob, item.name);
+    }
+
+    // 4. Spreadsheets (XLSX, XLS, ODS) - Auto-detect size, orientation & fit sheet
+    if (['xlsx', 'xls', 'ods'].includes(ext) && window.XLSX && window.html2canvas) {
+      return await renderSpreadsheetToPdf(await item.blob.arrayBuffer(), item.name);
+    }
+
+    // 5. Video Storyboard Contact Sheet (MP4, WEBM, MOV)
     if (['mp4', 'webm', 'mov'].includes(ext)) {
       return await renderVideoToPdf(item.blob, item.name);
     }
 
-    // 4. Multi-page TIFF
+    // 6. Multi-page TIFF (All IFDs/Pages)
     if (['tif', 'tiff'].includes(ext) && window.UTIF) {
       const buffer = await item.blob.arrayBuffer();
       const ifds = UTIF.decode(buffer);
@@ -1028,7 +1028,7 @@
       return new Blob([await pdfDoc.save()], { type: 'application/pdf' });
     }
 
-    // 5. Apple iWork QuickLook Extraction
+    // 7. Apple iWork QuickLook Extraction (.pages, .key, .numbers)
     if (['pages', 'key', 'numbers'].includes(ext) && window.JSZip) {
       const zip = await JSZip.loadAsync(item.blob);
       const previewPdf = zip.file("QuickLook/Preview.pdf");
@@ -1045,7 +1045,7 @@
       }
     }
 
-    // 6. Comic Book Archives (.cbz)
+    // 8. Comic Book Archives (.cbz)
     if (ext === 'cbz' && window.JSZip) {
       const zip = await JSZip.loadAsync(item.blob);
       const imgEntries = [];
@@ -1066,7 +1066,7 @@
       return new Blob([await pdfDoc.save()], { type: 'application/pdf' });
     }
 
-    // 7. EPUB eBooks
+    // 9. EPUB eBooks
     if (ext === 'epub' && window.JSZip) {
       const zip = await JSZip.loadAsync(item.blob);
       let fullText = "";
@@ -1083,7 +1083,7 @@
       return await renderTextToPdf(fullText, item.name);
     }
 
-    // 8. Direct Image Embedding (JPG / PNG)
+    // 10. Direct Image Embedding (JPG / PNG)
     if (['jpg', 'jpeg', 'jfif'].includes(ext)) {
       try {
         const bytes = await item.blob.arrayBuffer();
@@ -1103,7 +1103,7 @@
       } catch (e) {}
     }
 
-    // 9. HEIC / HEIF (iOS Photos)
+    // 11. HEIC / HEIF (iOS Photos)
     if (['heic', 'heif'].includes(ext) && window.heic2any) {
       const converted = await heic2any({ blob: item.blob, toType: 'image/jpeg' });
       const finalBlob = Array.isArray(converted) ? converted[0] : converted;
@@ -1113,7 +1113,7 @@
       return new Blob([await pdfDoc.save()], { type: 'application/pdf' });
     }
 
-    // 10. Raster & Vector Graphics
+    // 12. Other Web/Raster Images (WEBP, AVIF, GIF, BMP, SVG, ICO)
     const imageExts = ['webp', 'gif', 'bmp', 'svg', 'ico', 'avif', 'jpg', 'jpeg', 'jfif', 'png'];
     if (imageExts.includes(ext)) {
       const imgBitmap = await loadImageToCanvas(item.blob);
@@ -1124,19 +1124,440 @@
       return new Blob([await pdfDoc.save()], { type: 'application/pdf' });
     }
 
-    // 11. Spreadsheets
-    if (['xlsx', 'xls', 'ods'].includes(ext) && window.XLSX) {
-      const workbook = XLSX.read(await item.blob.arrayBuffer(), { type: 'array' });
-      let sheetText = "";
-      workbook.SheetNames.forEach(n => {
-        sheetText += `=== Sheet: ${n} ===\n\n` + XLSX.utils.sheet_to_csv(workbook.Sheets[n]) + "\n\n";
-      });
-      return await renderTextToPdf(sheetText, item.name);
-    }
-
-    // 12. Text, Markdown, Emails, Code, Logs
+    // 13. Text, Markdown, Emails, Code, Logs
     const rawText = await item.blob.text();
     return await renderTextToPdf(rawText, item.name);
+  }
+
+  // ==========================================
+  // POWERPOINT (PPTX) - HIGH-FIDELITY RENDERER
+  // ==========================================
+  async function renderPptxToPdf(blob, filename) {
+    const zip = await JSZip.loadAsync(blob);
+    const pdfDoc = await PDFLib.PDFDocument.create();
+
+    // 1. Auto-detect Slide Size & Orientation from ppt/presentation.xml
+    let sldW = 960; // default 16:9 widescreen in points
+    let sldH = 540;
+    try {
+      const presFile = zip.file("ppt/presentation.xml");
+      if (presFile) {
+        const presXml = await presFile.async("text");
+        const presDoc = new DOMParser().parseFromString(presXml, "application/xml");
+        const sldSz = presDoc.querySelector("sldSz, p\\:sldSz");
+        if (sldSz) {
+          const cx = parseInt(sldSz.getAttribute("cx") || "0", 10);
+          const cy = parseInt(sldSz.getAttribute("cy") || "0", 10);
+          if (cx > 0 && cy > 0) {
+            sldW = Math.round(cx / 12700); // 12,700 EMUs = 1 point
+            sldH = Math.round(cy / 12700);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Could not parse presentation.xml dimensions, using standard 16:9:", err);
+    }
+
+    // 2. Discover and sort all slides
+    const slideEntries = [];
+    zip.forEach((path, entry) => {
+      if (!entry.dir && path.match(/^ppt\/slides\/slide\d+\.xml$/i)) {
+        slideEntries.push(entry);
+      }
+    });
+
+    if (slideEntries.length === 0) {
+      throw new Error("No slide XML files found inside PowerPoint presentation.");
+    }
+
+    slideEntries.sort((a, b) => {
+      const numA = parseInt(a.name.match(/\d+/)[0], 10);
+      const numB = parseInt(b.name.match(/\d+/)[0], 10);
+      return numA - numB;
+    });
+
+    // Staging container for slide snapshotting
+    const staging = document.createElement('div');
+    staging.style.position = 'fixed';
+    staging.style.left = '-9999px';
+    staging.style.top = '0';
+    staging.style.zIndex = '-9999';
+    staging.style.pointerEvents = 'none';
+    document.body.appendChild(staging);
+
+    try {
+      for (let i = 0; i < slideEntries.length; i++) {
+        const slideEntry = slideEntries[i];
+        const slideXmlStr = await slideEntry.async("text");
+        const slideDoc = new DOMParser().parseFromString(slideXmlStr, "application/xml");
+
+        // Load relationship mappings for embedded images
+        const slideIndex = slideEntry.name.match(/\d+/)[0];
+        const relsFile = zip.file(`ppt/slides/_rels/slide${slideIndex}.xml.rels`);
+        const relsMap = {};
+        if (relsFile) {
+          try {
+            const relsXmlStr = await relsFile.async("text");
+            const relsDoc = new DOMParser().parseFromString(relsXmlStr, "application/xml");
+            const relEls = relsDoc.querySelectorAll("Relationship");
+            relEls.forEach(r => {
+              relsMap[r.getAttribute("Id")] = r.getAttribute("Target");
+            });
+          } catch (e) {}
+        }
+
+        // Slide background color
+        let slideBg = '#ffffff';
+        const bgClr = slideDoc.querySelector("bg srgbClr, bgPr srgbClr, a\\:srgbClr");
+        if (bgClr && bgClr.getAttribute("val")) {
+          slideBg = '#' + bgClr.getAttribute("val");
+        }
+
+        const slideBox = document.createElement('div');
+        slideBox.style.width = `${sldW}px`;
+        slideBox.style.height = `${sldH}px`;
+        slideBox.style.position = 'relative';
+        slideBox.style.overflow = 'hidden';
+        slideBox.style.backgroundColor = slideBg;
+        slideBox.style.boxSizing = 'border-box';
+        slideBox.style.fontFamily = "'Quicksand', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+
+        // A. Embedded Pictures (<p:pic>)
+        const picNodes = Array.from(slideDoc.querySelectorAll("pic, p\\:pic"));
+        for (const pic of picNodes) {
+          const blip = pic.querySelector("blip, a\\:blip");
+          const rEmbed = blip ? (blip.getAttribute("r:embed") || blip.getAttribute("embed")) : null;
+          if (!rEmbed || !relsMap[rEmbed]) continue;
+
+          let target = relsMap[rEmbed];
+          let mediaPath = target.startsWith("../") ? "ppt/" + target.substring(3) : "ppt/slides/" + target;
+          const imgFile = zip.file(mediaPath) || zip.file(target.replace(/^\.\.\//, "ppt/"));
+          if (!imgFile) continue;
+
+          const imgBlob = await imgFile.async("blob");
+          const imgUrl = URL.createObjectURL(imgBlob);
+
+          const xfrm = pic.querySelector("xfrm, a\\:xfrm");
+          let x = 0, y = 0, w = sldW, h = sldH;
+          if (xfrm) {
+            const off = xfrm.querySelector("off, a\\:off");
+            const ext = xfrm.querySelector("ext, a\\:ext");
+            if (off) {
+              x = parseInt(off.getAttribute("x") || "0", 10) / 12700;
+              y = parseInt(off.getAttribute("y") || "0", 10) / 12700;
+            }
+            if (ext) {
+              w = parseInt(ext.getAttribute("cx") || "0", 10) / 12700;
+              h = parseInt(ext.getAttribute("cy") || "0", 10) / 12700;
+            }
+          }
+
+          const imgEl = document.createElement('img');
+          imgEl.src = imgUrl;
+          imgEl.style.position = 'absolute';
+          imgEl.style.left = `${Math.max(0, x)}px`;
+          imgEl.style.top = `${Math.max(0, y)}px`;
+          imgEl.style.width = `${Math.max(10, w)}px`;
+          imgEl.style.height = `${Math.max(10, h)}px`;
+          imgEl.style.objectFit = 'contain';
+          slideBox.appendChild(imgEl);
+        }
+
+        // B. Shapes & Formatted Text (<p:sp>)
+        const spNodes = Array.from(slideDoc.querySelectorAll("sp, p\\:sp"));
+        for (const sp of spNodes) {
+          if (sp.closest("pic, p\\:pic")) continue;
+
+          const xfrm = sp.querySelector("xfrm, a\\:xfrm");
+          let x = null, y = null, w = null, h = null;
+          if (xfrm) {
+            const off = xfrm.querySelector("off, a\\:off");
+            const ext = xfrm.querySelector("ext, a\\:ext");
+            if (off && ext) {
+              x = parseInt(off.getAttribute("x") || "0", 10) / 12700;
+              y = parseInt(off.getAttribute("y") || "0", 10) / 12700;
+              w = parseInt(ext.getAttribute("cx") || "0", 10) / 12700;
+              h = parseInt(ext.getAttribute("cy") || "0", 10) / 12700;
+            }
+          }
+
+          let shapeBg = 'transparent';
+          const solidFill = sp.querySelector("spPr > solidFill > srgbClr, spPr solidFill srgbClr, a\\:spPr a\\:solidFill a\\:srgbClr");
+          if (solidFill && solidFill.getAttribute("val")) {
+            shapeBg = '#' + solidFill.getAttribute("val");
+          }
+
+          let shapeBorder = 'none';
+          const lnClr = sp.querySelector("spPr > ln > solidFill > srgbClr, a\\:ln a\\:srgbClr");
+          if (lnClr && lnClr.getAttribute("val")) {
+            shapeBorder = `1.5px solid #${lnClr.getAttribute("val")}`;
+          }
+
+          const pNodes = Array.from(sp.querySelectorAll("txBody p, a\\:txBody a\\:p, p\\:txBody a\\:p"));
+          let hasText = false;
+          const pFragment = document.createDocumentFragment();
+
+          for (const pNode of pNodes) {
+            const pEl = document.createElement('div');
+            pEl.style.margin = '0 0 6px 0';
+            pEl.style.lineHeight = '1.3';
+
+            const pPr = pNode.querySelector("pPr, a\\:pPr");
+            if (pPr) {
+              const algn = pPr.getAttribute("algn");
+              if (algn === 'ctr') pEl.style.textAlign = 'center';
+              else if (algn === 'r') pEl.style.textAlign = 'right';
+              else if (algn === 'just') pEl.style.textAlign = 'justify';
+              else pEl.style.textAlign = 'left';
+            }
+
+            const rNodes = Array.from(pNode.querySelectorAll("r, a\\:r"));
+            if (rNodes.length > 0) {
+              for (const rNode of rNodes) {
+                const tNode = rNode.querySelector("t, a\\:t");
+                if (!tNode || !tNode.textContent) continue;
+                hasText = true;
+
+                const span = document.createElement('span');
+                span.textContent = tNode.textContent;
+
+                const rPr = rNode.querySelector("rPr, a\\:rPr");
+                if (rPr) {
+                  if (rPr.getAttribute("b") === "1") span.style.fontWeight = '700';
+                  if (rPr.getAttribute("i") === "1") span.style.fontStyle = 'italic';
+                  if (rPr.getAttribute("u") && rPr.getAttribute("u") !== 'none') span.style.textDecoration = 'underline';
+
+                  const sz = parseInt(rPr.getAttribute("sz") || "0", 10);
+                  if (sz > 0) {
+                    span.style.fontSize = `${Math.max(10, Math.round(sz / 100))}px`;
+                  }
+
+                  const fontClr = rPr.querySelector("solidFill srgbClr, a\\:solidFill a\\:srgbClr");
+                  if (fontClr && fontClr.getAttribute("val")) {
+                    span.style.color = '#' + fontClr.getAttribute("val");
+                  }
+                }
+                pEl.appendChild(span);
+              }
+            } else {
+              const tNodes = Array.from(pNode.querySelectorAll("t, a\\:t"));
+              for (const tNode of tNodes) {
+                if (tNode.textContent) {
+                  hasText = true;
+                  const span = document.createElement('span');
+                  span.textContent = tNode.textContent;
+                  pEl.appendChild(span);
+                }
+              }
+            }
+
+            if (pEl.childNodes.length > 0) pFragment.appendChild(pEl);
+          }
+
+          if (hasText || shapeBg !== 'transparent' || shapeBorder !== 'none') {
+            const shapeBox = document.createElement('div');
+            shapeBox.style.boxSizing = 'border-box';
+            shapeBox.style.background = shapeBg;
+            shapeBox.style.border = shapeBorder;
+            shapeBox.style.padding = '8px 12px';
+            shapeBox.style.wordBreak = 'break-word';
+
+            if (x !== null && y !== null && w !== null && h !== null) {
+              shapeBox.style.position = 'absolute';
+              shapeBox.style.left = `${Math.max(0, x)}px`;
+              shapeBox.style.top = `${Math.max(0, y)}px`;
+              shapeBox.style.width = `${Math.max(20, w)}px`;
+              shapeBox.style.minHeight = `${Math.max(10, h)}px`;
+            } else {
+              shapeBox.style.position = 'relative';
+              shapeBox.style.margin = '16px auto';
+              shapeBox.style.width = '88%';
+            }
+
+            shapeBox.appendChild(pFragment);
+            slideBox.appendChild(shapeBox);
+          }
+        }
+
+        // C. Embedded Tables (<a:tbl>)
+        const tblNodes = Array.from(slideDoc.querySelectorAll("tbl, a\\:tbl"));
+        for (const tbl of tblNodes) {
+          const frame = tbl.closest("graphicFrame, p\\:graphicFrame");
+          let x = 40, y = 80, w = sldW - 80;
+          if (frame) {
+            const xfrm = frame.querySelector("xfrm, a\\:xfrm");
+            if (xfrm) {
+              const off = xfrm.querySelector("off, a\\:off");
+              const ext = xfrm.querySelector("ext, a\\:ext");
+              if (off && ext) {
+                x = parseInt(off.getAttribute("x") || "0", 10) / 12700;
+                y = parseInt(off.getAttribute("y") || "0", 10) / 12700;
+                w = parseInt(ext.getAttribute("cx") || "0", 10) / 12700;
+              }
+            }
+          }
+
+          const tableEl = document.createElement('table');
+          tableEl.style.position = 'absolute';
+          tableEl.style.left = `${x}px`;
+          tableEl.style.top = `${y}px`;
+          tableEl.style.width = `${w}px`;
+          tableEl.style.borderCollapse = 'collapse';
+          tableEl.style.fontSize = '12px';
+          tableEl.style.background = '#ffffff';
+
+          const trNodes = Array.from(tbl.querySelectorAll("tr, a\\:tr"));
+          trNodes.forEach((trNode, rIdx) => {
+            const trEl = document.createElement('tr');
+            const tcNodes = Array.from(trNode.querySelectorAll("tc, a\\:tc"));
+            tcNodes.forEach(tcNode => {
+              const tdEl = document.createElement(rIdx === 0 ? 'th' : 'td');
+              tdEl.style.border = '1px solid #cbd5e1';
+              tdEl.style.padding = '6px 8px';
+              tdEl.textContent = Array.from(tcNode.querySelectorAll("t, a\\:t")).map(t => t.textContent).join(' ');
+              if (rIdx === 0) {
+                tdEl.style.background = '#fff0f6';
+                tdEl.style.color = '#ff70a6';
+                tdEl.style.fontWeight = '700';
+              }
+              trEl.appendChild(tdEl);
+            });
+            tableEl.appendChild(trEl);
+          });
+          slideBox.appendChild(tableEl);
+        }
+
+        // Render slide via html2canvas
+        staging.innerHTML = '';
+        staging.appendChild(slideBox);
+
+        const pendingImgs = Array.from(slideBox.querySelectorAll('img'));
+        await Promise.all(pendingImgs.map(img => {
+          if (img.complete) return Promise.resolve();
+          return new Promise(res => { img.onload = res; img.onerror = res; });
+        }));
+
+        const canvas = await html2canvas(slideBox, {
+          scale: 2,
+          backgroundColor: slideBg,
+          logging: false,
+          useCORS: true
+        });
+
+        const pngBytes = dataUriToArrayBuffer(canvas.toDataURL('image/png'));
+        const embeddedImg = await pdfDoc.embedPng(pngBytes);
+
+        // Fits entire slide perfectly onto its own separate page!
+        const page = pdfDoc.addPage([sldW, sldH]);
+        page.drawImage(embeddedImg, { x: 0, y: 0, width: sldW, height: sldH });
+      }
+    } finally {
+      if (staging.parentNode) staging.parentNode.removeChild(staging);
+    }
+
+    return new Blob([await pdfDoc.save()], { type: 'application/pdf' });
+  }
+
+  // ==========================================
+  // SPREADSHEETS (XLSX, XLS, ODS)
+  // ==========================================
+  async function renderSpreadsheetToPdf(arrayBuffer, filename) {
+    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+    const pdfDoc = await PDFLib.PDFDocument.create();
+
+    const staging = document.createElement('div');
+    staging.style.position = 'fixed';
+    staging.style.left = '-9999px';
+    staging.style.top = '0';
+    staging.style.zIndex = '-9999';
+    document.body.appendChild(staging);
+
+    try {
+      for (const sheetName of workbook.SheetNames) {
+        const sheet = workbook.Sheets[sheetName];
+        const htmlTable = XLSX.utils.sheet_to_html(sheet, { header: '', footer: '' });
+
+        const ref = sheet['!ref'];
+        let colCount = 5;
+        if (ref) {
+          const range = XLSX.utils.decode_range(ref);
+          colCount = (range.e.c - range.s.c) + 1;
+        }
+
+        // Auto-detect orientation: Wide tables -> Landscape, narrow tables -> Portrait
+        const isLandscape = colCount > 6;
+        const pageW = isLandscape ? 841.89 : 595.28;
+        const pageH = isLandscape ? 595.28 : 841.89;
+
+        const container = document.createElement('div');
+        container.style.width = `${pageW}px`;
+        container.style.minHeight = `${pageH}px`;
+        container.style.padding = '36px';
+        container.style.background = '#ffffff';
+        container.style.boxSizing = 'border-box';
+        container.style.fontFamily = "'Quicksand', -apple-system, sans-serif";
+
+        const header = document.createElement('div');
+        header.style.display = 'flex';
+        header.style.justifyContent = 'space-between';
+        header.style.alignItems = 'center';
+        header.style.marginBottom = '16px';
+        header.style.borderBottom = '2px solid #f8c1d9';
+        header.style.paddingBottom = '8px';
+        header.innerHTML = `
+          <span style="font-weight:700; font-size:16px; color:#492a3e;">📊 ${sheetName}</span>
+          <span style="font-size:12px; color:#956983;">${filename}</span>
+        `;
+        container.appendChild(header);
+
+        const tableWrapper = document.createElement('div');
+        tableWrapper.innerHTML = htmlTable;
+
+        const tableEl = tableWrapper.querySelector('table');
+        if (tableEl) {
+          tableEl.style.width = '100%';
+          tableEl.style.borderCollapse = 'collapse';
+          tableEl.style.fontSize = colCount > 10 ? '9px' : (colCount > 7 ? '11px' : '12px');
+          tableEl.style.color = '#334155';
+
+          const ths = tableEl.querySelectorAll('th, tr:first-child td');
+          ths.forEach(th => {
+            th.style.background = '#fff0f6';
+            th.style.color = '#ff70a6';
+            th.style.fontWeight = '700';
+            th.style.border = '1px solid #ffd4e5';
+            th.style.padding = '6px 8px';
+          });
+
+          const tds = tableEl.querySelectorAll('td');
+          tds.forEach(td => {
+            td.style.border = '1px solid #e2e8f0';
+            td.style.padding = '5px 8px';
+          });
+        }
+        container.appendChild(tableWrapper);
+
+        staging.innerHTML = '';
+        staging.appendChild(container);
+
+        const canvas = await html2canvas(container, {
+          scale: 1.6,
+          backgroundColor: '#ffffff',
+          logging: false
+        });
+
+        const pngBytes = dataUriToArrayBuffer(canvas.toDataURL('image/png'));
+        const img = await pdfDoc.embedPng(pngBytes);
+
+        const actualH = Math.max(pageH, (canvas.height / canvas.width) * pageW);
+        const page = pdfDoc.addPage([pageW, actualH]);
+        page.drawImage(img, { x: 0, y: 0, width: pageW, height: actualH });
+      }
+    } finally {
+      if (staging.parentNode) staging.parentNode.removeChild(staging);
+    }
+
+    return new Blob([await pdfDoc.save()], { type: 'application/pdf' });
   }
 
   // --- HIGH-FIDELITY DOCX RENDERER ---
