@@ -1,6 +1,6 @@
 # Universal Virtual Print to PDF
 
-A browser-based virtual printer that converts any printable file format—Word documents, spreadsheets, presentations, Apple iWork suites, multi-page faxes, raw scans, video contact sheets, comics, and code—into standard PDFs with 1:1 original dimensions preserved.
+A browser-based virtual printer that converts any printable file format - Word documents, spreadsheets, presentations, Apple iWork suites, multi-page faxes, raw scans, video contact sheets, comics, and code - into standard PDFs with 1:1 original dimensions preserved.
 
 Runs 100% client-side inside the browser. No uploads, no servers, and zero data leakage.
 
@@ -12,7 +12,7 @@ Live Demo: [nekonyan.fun/anything-to-pdf](https://nekonyan.fun/anything-to-pdf)
 
 Instead of relying on heavy server-side conversion clusters or installing OS print drivers, **Anything to PDF** leverages the browser's native rendering capabilities, WebAssembly decoders, and container deconstruction techniques:
 
-- **Zero Rescaling / Distortion:** Each file keeps its raw dimensions. An irregular phone photo or long receipt gets a canvas matching its exact pixel boundaries—no forced letterboxing or unwanted margins.
+- **Zero Rescaling / Distortion:** Each file keeps its raw dimensions. An irregular phone photo or long receipt gets a canvas matching its exact pixel boundaries - no forced letterboxing or unwanted margins.
 - **Container Extraction:** Modern office documents (`.docx`, `.pptx`, `.odt`) and comics (`.cbz`) are decompressed directly in memory to access raw XML and image streams.
 - **High-DPI Vector Printing:** Text, markdown, and code files are laid out using a retina 2× virtual print engine with automatic line wrapping and header pagination.
 
@@ -109,5 +109,5 @@ Open your browser to `http://localhost:8000`.
 
 ## Related Tools
 
-* **[Batch PDF Scaler & A4 Resizer](https://www.google.com/url?sa=E&source=gmail&q=https://nekonyan.fun/PDF-Resizer):** Fit irregular document scans into standard A4 sheets or equalize all page widths with locked aspect ratios.
+* **[Batch PDF Scaler & A4 Resizer](https://nekonyan.fun/PDF-Resizer):** Fit irregular document scans into standard A4 sheets or equalize all page widths with locked aspect ratios.
 
